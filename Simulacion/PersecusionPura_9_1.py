@@ -1,48 +1,69 @@
 #!/usr/bin/env python3
+# '''Hello to the world from ev3dev.org'''
 
-import numpy as np
-import math 
-from matplotlib import pyplot as plt
+# import os
+# import sys
+# import time
 
-
-# punto actual Debe ir cambiando
-x = float(input('Ingrese el punto inicial en X: '))
-y = float(input('Ingrese el punto inicial en Y: '))
-teta = float(input('Ingrese el angulo con el que sale en vehiculo: '))
-v = float(input('Ingrese la velocidad del vehiculo: '))
-
-#punto objetivo
-Xob = float(input('Ingrese el punto objetivo en X: '))
-Yob = float(input('Ingrese el punto objetivo en Y: '))
+from ev3dev2.ev3 import *
+from time import sleep
+import math
 
 
-deltaX = (Xob - x)*math.cos(teta) + (Yob - y)*math.sin(teta)
+Xob = 8
+Yob = 8
+v = 0.5
+x = 0
+y = 0
+tetha = 0
+l = 4
+movimientosX = [x]
+movimientosY = [y]
 
-L =  math.sqrt((Xob - x)**2 + (Yob - y)**2)
+ruedaDerecha = LargeMotor('outC')
+ruedaIzquierda = LargeMotor('outB')
 
-xC=[]
+gyro = GyroSensor()
+gyro.mode = 'GYRO-ANG'
+unidades = gyro.units
+angulo = gyro.value()
+sleep(1)
 
-i = False
-while i == False:  
-    x = -v * math.sin(teta) + x
-    y = v * math.cos(teta) + y
-    deltaX = (Xob - x)*math.cos(teta) + (Yob - y)*math.sin(teta)
-    L =  math.sqrt((Xob - x)**2 + (Yob - y)**2)
-    curvatura = -(2*deltaX)/(L**2)
-    teta = v * curvatura
-    xC.append([x,y])
-    if x >= Xob or y >= Yob:
-        i = True
-        
+def Caminar():
+    ruedaDerecha.run_timed(time_sp = 1000, speed_sp = 260)
+    ruedaIzquierda.run_timed(time_sp = 1000, speed_sp = 260)
+    angulo = gyro.value()
 
-#print('Distancia es: ',L )
-#print('Delta X es: ',X )
-#print('curvatura es: ',curvatura )
+def Girar(ang,tetha):
+    diferencia =  ang - tetha
+    while math.fabs(math.fabs(ang) - math.fabs(tetha)) > 10:
+        if diferencia > 0:
+            ruedaDerecha.run_timed(time_sp = 40, speed_sp = -260)
+            ruedaIzquierda.run_timed(time_sp = 40, speed_sp = 260)
+        else:
+            ruedaDerecha.run_timed(time_sp = 40, speed_sp = 260)
+            ruedaIzquierda.run_timed(time_sp = 40, speed_sp =-260)
+        ang = gyro.value()
+        sleep(1)
+    
+def PersecusionPura(tetha,x,y):
+    x = -v * math.sin(tetha) + x
+    y = v * math.cos(tetha) + y
+    deltaX = (Xob - x) * math.cos(tetha) + (Yob - y) * math.sin(tetha)
+    curvatura = -(2 * deltaX)/(l**2)
+    tetha += v * curvatura
+    movimientosX.append(x)
+    movimientosY.append(y)
+    return ang,x,y
 
-X2 = np.linspace(x,Xob, len(xC),endpoint=True)
-Y2 = X2 
+while True:
+    tetha,x,y = PersecusionPura(tetha,x,y)
+    tetha = math.degrees(tetha)
+    ang = gyro.value()
+    Girar(ang,tetha)
+    Caminar()
+    sleep(1)
+    if math.fabs(x) >= Xob or math.fabs(y) >= Yob:
+        break
 
-plt.plot(X2)
-plt.plot(xC)
 
-plt.show()
